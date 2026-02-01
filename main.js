@@ -102,7 +102,6 @@ map.on("load", () => {
     })
 
 
-    
   map.on("click", "clusters", function (e) {
     map.flyTo({ center: e.lngLat, zoom: 8 });
   })
