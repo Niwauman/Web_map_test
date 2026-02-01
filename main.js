@@ -1,101 +1,115 @@
-// Инициализируем карту
 const map = new maplibregl.Map({
   container: 'map',
-//  style: "https://raw.githubusercontent.com/gtitov/basemaps/refs/heads/master/positron-nolabels.json",
-   style: {
-   "version": 8,
-   "sources": {},
-   "layers": []
- },
+  style: "https://raw.githubusercontent.com/gtitov/basemaps/refs/heads/master/positron-nolabels.json",
   center: [51, 0],
-  zoom: 4
+  zoom: 4,
+  hash: true
 });
 
-map.on('load', () => {
-        // Выполняется после загрузки карты
-    
-    map.addLayer({
-       id: 'background',
-       type: 'background',
-       paint: {
-       'background-color': 'lightblue'
-       }
-   })
-    // Добавление источника данных
-    map.addSource('countries', {
-        type: 'geojson',
-        data: './data/countries.geojson',
-        attribution: 'Natural Earth'
-    })
-
-    // Добавление слоя
-    map.addLayer({
-        id: 'countries-layer',
-        type: 'fill',
-        source: 'countries',
-        paint: {
-            'fill-color': ['match', ['get', 'MAPCOLOR7'], 1, 'red', 'lightgray']
+map.on("load", () => {
+  fetch("https://docs.google.com/spreadsheets/d/1aCLo9AgS5oeVshffC1-LYMF2shR-wp-4H87X_1j84oI/export?format=csv")
+    .then((response) => response.text())
+    .then((csv) => {
+      // console.log(csv)
+      const rows = Papa.parse(csv, { header: true })
+      // console.log(rows)
+      const geojsonFeatures = rows.data.map((row) => {
+        return {
+          type: "Feature",
+          properties: row,
+          geometry: {
+            type: "Point",
+            coordinates: [row.lon, row.lat]
+          }
         }
-    })
-    // Выполняется после загрузки карты
-    map.addSource('rivers', {
-        type: 'geojson',
-        data: './data/rivers.geojson'
-    })
+      })
 
-    map.addLayer({
-        id: 'rivers-layer',
-        type: 'line',
-        source: 'rivers',
+      const geojson = {
+        type: "FeatureCollection",
+        features: geojsonFeatures
+      }
+
+      map.addSource("vacancies", {
+        type: "geojson",
+        data: geojson,
+        cluster: true,
+        clusterRadius: 20
+      })
+
+      map.addLayer({
+        id: "clusters",
+        source: "vacancies",
+        type: "circle",
         paint: {
-            'line-color': '#82e1f1'
+          "circle-color": "#7EC8E3",
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#FFFFFF",
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            12,
+            3,
+            20,
+            6,
+            30
+          ]
         }
-    })
+      })
 
-    map.addSource('lakes', {
-        type: 'geojson',
-        data: './data/lakes.geojson'
-    })
-
-    map.addLayer({
-        id: 'lakes-layer',
-        type: 'fill',
-        source: 'lakes',
-        paint: {
-            'fill-color': 'lightblue',
-            'fill-outline-color': '#00BFFF'
+      map.addLayer({
+        id: "cluster-labels",
+        type: "symbol",
+        source: "vacancies",
+        layout: {
+          "text-field": ["get", "point_count"],
+          "text-size": 10
         }
+      })
+
+      geojson.features.map((f) => {
+        document.getElementById("list-all").innerHTML += `<div class="list-item">
+                <h4>${f.properties["Название"]}</h4>
+                <a href="#" onclick="map.flyTo({ center: [${f.geometry.coordinates}], zoom: 800})">Показать ближе</a>
+                </div><hr>`
+      })
+
+      map.on("moveend", () => {
+        const features = map.queryRenderedFeatures({ layers: ["clusters"] })
+        document.getElementById("list-selected").innerHTML = "<h2>Сейчас на карте</h2>"
+
+        features.map(f => {
+          if (f.properties.cluster) {
+            map.getSource("vacancies").getClusterLeaves(
+              clusterId = f.properties.cluster_id,
+              limit = f.properties.point_count,
+              offset = 0
+            )
+              .then((clusterFeatures) => {
+                clusterFeatures.map((feature) => document.getElementById("list-selected")
+                  .innerHTML += `<div class="list-item">
+                                <h4>${feature.properties["Название"]}</h4>
+                                <a>Адрес: ${feature.properties["Адрес"]}</a>
+                                </div><hr>`)
+              })
+          } else {
+            document.getElementById("list-selected")
+              .innerHTML += `<div class="list-item">
+                                <h4>${f.properties["Название"]}</h4>
+                                <a>Адрес: ${f.properties["Адрес"]}</a>
+                                </div><hr>`
+          }
+        })
+      })
     })
 
-    map.addSource('cities', {
-        type: 'geojson',
-        data: './data/cities.geojson'
-    })
-    map.addLayer({
-        id: 'cities-layer',
-        type: 'circle',
-        source: 'cities',
-        paint: {
-            'circle-color': 'rgb(23, 55, 240)',
-            'circle-radius': 10
-        },
-        filter: ['>', ['get', 'POP_MAX'], 1000000]
+  map.on("click", "clusters", function (e) {
+    map.flyTo({ center: e.lngLat, zoom: 8 });
+  })
 
-    })
+  map.on("mouseenter", "clusters", function () {
+    map.getCanvas().style.cursor = "pointer";
+  })
 
-    map.on('mouseenter', 'cities-layer', () => {
-        map.getCanvas().style.cursor = 'pointer'
-    })
-    map.on('mouseleave', 'cities-layer', () => {
-        map.getCanvas().style.cursor = ''
-    })
-
-    map.on('click', ['cities-layer'], (e) => {
-        // console.log(e)
-        // console.log(e.features)
-        new maplibregl.Popup() // создадим попап
-            .setLngLat(e.features[0].geometry.coordinates) // установим на координатах объекта
-            .setHTML(e.features[0].properties.NAME) // заполним  текстом из атрибута с именем объекта
-            .addTo(map); // добавим на карту
-    })
+  map.on("mouseleave", "clusters", function () {
+    map.getCanvas().style.cursor = "";
+  })
 })

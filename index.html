@@ -4,18 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Население мира</title>
-    <!-- Запрашиваем стили 👇 -->
+    <title>Карта муралов в г. Южно-Сахалинск</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Запрашиваем библиотеку MapLibre 👇 -->
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 
 <body>
-    <!-- Размечаем контейнер для карты 👇 -->
     <div id="map"></div>
-    <!-- Запрашиваем логику карты 👇 -->
+    <div id="list-selected"><h2>Сейчас на карте</h2></div>
+    <div id="list-all"><h2>Все муралы</h2></div>
     <script src="main.js"></script>
 </body>
 
