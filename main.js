@@ -101,6 +101,7 @@ map.on("load", () => {
       })
     })
 
+    
   map.on("click", "clusters", function (e) {
     map.flyTo({ center: e.lngLat, zoom: 8 });
   })
@@ -109,7 +110,7 @@ map.on("load", () => {
     map.getCanvas().style.cursor = "pointer";
   })
 
-  
+
   map.on("mouseleave", "clusters", function () {
     map.getCanvas().style.cursor = "";
   })
